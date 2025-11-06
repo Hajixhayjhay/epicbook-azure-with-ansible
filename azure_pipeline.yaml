@@ -29,9 +29,9 @@ stages:
         echo "Copying SSH public key into Terraform module"
         mkdir -p ~/.ssh
         cp $(download_ssh_key.secureFilePath) ~/.ssh/id_rsa_azure.pub
-        cp $(download_ssh_key.secureFilePath) terraform/modules/compute/id_rsa_azure.pub
-        echo "Listing contents of terraform/modules/compute/"
-        ls -al terraform/modules/compute/
+        cp $(download_ssh_key.secureFilePath) azure/modules/compute/id_rsa_azure.pub
+        echo "Listing contents of azure/modules/compute/"
+        ls -al azure/modules/compute/
       displayName: 'Prepare SSH Public Key for Terraform'
 
     # 3️⃣ Download Terraform variable file (dev.tfvars) securely
