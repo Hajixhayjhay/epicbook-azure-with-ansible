@@ -17,59 +17,59 @@ stages:
 
     steps:
 
+    # 1️⃣ Download SSH Public Key from Secure Files
     - task: DownloadSecureFile@1
       name: download_ssh_key
       inputs:
         secureFile: 'id_rsa_azure.pub'
+      displayName: 'Download SSH Public Key'
 
+    # 2️⃣ Copy SSH key into Terraform module folder
     - script: |
         echo "Copying SSH public key into Terraform module"
         mkdir -p ~/.ssh
         cp $(download_ssh_key.secureFilePath) ~/.ssh/id_rsa_azure.pub
-        cp $(download_ssh_key.secureFilePath) terraform/modules/compute/id_rsa_azure.pub
-        echo "Listing contents of terraform/modules/compute/"
-        ls -al terraform/modules/compute/
-      displayName: 'Extract SSH Public Key for Terraform'
+        cp $(download_ssh_key.secureFilePath) $(System.DefaultWorkingDirectory)/azure/modules/compute/id_rsa_azure.pub
+        echo "Listing contents of azure/modules/compute/"
+        ls -al $(System.DefaultWorkingDirectory)/azure/modules/compute/
+      displayName: 'Prepare SSH Public Key for Terraform'
 
-    - task: AzureCLI@2
-      displayName: 'Terraform Init, Plan and Apply'
+    # 3️⃣ Download Terraform variable file (dev.tfvars.txt) securely
+    - task: DownloadSecureFile@1
+      name: download_tfvars
       inputs:
-        azureSubscription: 'azure-devops-connection'
+        secureFile: 'dev.tfvars.txt'
+      displayName: 'Download Terraform Variable File'
+
+    # 4️⃣ Copy & rename the secure file into Terraform working directory
+    - script: |
+        echo "Copying tfvars file to Terraform working directory..."
+        cp $(download_tfvars.secureFilePath) $(System.DefaultWorkingDirectory)/azure/dev.tfvars
+        echo "Secure file copied and renamed successfully:"
+        ls -al $(System.DefaultWorkingDirectory)/azure/dev.tfvars
+      displayName: 'Prepare dev.tfvars for Terraform'
+
+    # 5️⃣ Terraform Init, Plan, and Apply
+    - task: AzureCLI@2
+      displayName: 'Terraform Init, Plan, and Apply'
+      inputs:
+        azureSubscription: 'azure-devops-connection'  # Your service connection
         scriptType: bash
         scriptLocation: inlineScript
-        workingDirectory: $(System.DefaultWorkingDirectory)/terraform/azure
+        workingDirectory: $(System.DefaultWorkingDirectory)/azure
         inlineScript: |
           echo "Initializing Terraform..."
-          terraform init -input=false 
+          terraform init -input=false
 
           echo "Planning Terraform changes..."
-          terraform plan -input=false \
-            -var "application_name=$(application_name)" \
-            -var "environment=$(environment)" \
-            -var "location=$(location)" \
-            -var "admin_username=$(admin_username)" \
-            -var "admin_password=$(admin_password)" \
-            -var "mysql_admin_username=$(mysql_admin_username)" \
-            -var "mysql_admin_password=$(mysql_admin_password)" \
-            -var "mysql_database_name=$(mysql_database_name)" \
-            -var 'vnet_address_space=$(vnet_address_space)' \
-            -var 'public_subnet_address_prefixes=$(public_subnet_address_prefixes)' \
-            -var 'private_subnet_address_prefixes=$(private_subnet_address_prefixes)' \
-            -var "vm_size=$(vm_size)" \
-            -var "ssh_public_key=$(ssh_public_key)"
+          terraform plan -input=false -var-file=dev.tfvars
 
           echo "Applying Terraform..."
-          terraform apply -input=false -auto-approve \
-            -var "application_name=$(application_name)" \
-            -var "environment=$(environment)" \
-            -var "location=$(location)" \
-            -var "admin_username=$(admin_username)" \
-            -var "admin_password=$(admin_password)" \
-            -var "mysql_admin_username=$(mysql_admin_username)" \
-            -var "mysql_admin_password=$(mysql_admin_password)" \
-            -var "mysql_database_name=$(mysql_database_name)" \
-            -var 'vnet_address_space=$(vnet_address_space)' \
-            -var 'public_subnet_address_prefixes=$(public_subnet_address_prefixes)' \
-            -var 'private_subnet_address_prefixes=$(private_subnet_address_prefixes)' \
-            -var "vm_size=$(vm_size)" \
-            -var "ssh_public_key=$(ssh_public_key)"
+          terraform apply -input=false -auto-approve -var-file=dev.tfvars
+
+    # 6️⃣ Optional: Clean up secure files after use
+    - script: |
+        echo "Cleaning up secure files..."
+        rm -f ~/.ssh/id_rsa_azure.pub
+        rm -f $(System.DefaultWorkingDirectory)/azure/dev.tfvars
+      displayName: 'Clean Up Secure Files'
