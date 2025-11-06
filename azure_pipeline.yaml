@@ -24,45 +24,52 @@ stages:
         secureFile: 'id_rsa_azure.pub'
       displayName: 'Download SSH Public Key'
 
-    # 2️⃣ Copy SSH key into Terraform compute module folder
+    # 2️⃣ Copy SSH key into Terraform module folder
     - script: |
         echo "Copying SSH public key into Terraform module"
         mkdir -p ~/.ssh
         cp $(download_ssh_key.secureFilePath) ~/.ssh/id_rsa_azure.pub
-        mkdir -p azure/modules/compute
         cp $(download_ssh_key.secureFilePath) azure/modules/compute/id_rsa_azure.pub
         echo "Listing contents of azure/modules/compute/"
         ls -al azure/modules/compute/
       displayName: 'Prepare SSH Public Key for Terraform'
 
-    # 3️⃣ Download Terraform variable file (dev.tfvars) securely
+    # 3️⃣ Download Terraform variable file (dev.tfvars.txt) securely
     - task: DownloadSecureFile@1
       name: download_tfvars
       inputs:
-        secureFile: 'dev.tfvars'
+        secureFile: 'dev.tfvars.txt'
       displayName: 'Download Terraform Variable File'
 
-    # 4️⃣ Terraform Init, Plan, and Apply
+    # 4️⃣ Rename the secure file so Terraform can read it
+    - script: |
+        echo "Renaming secure file to dev.tfvars for Terraform..."
+        cp $(download_tfvars.secureFilePath) ./dev.tfvars
+        echo "Secure file renamed successfully:"
+        ls -al ./dev.tfvars
+      displayName: 'Rename Secure File for Terraform'
+
+    # 5️⃣ Terraform Init, Plan, and Apply
     - task: AzureCLI@2
       displayName: 'Terraform Init, Plan, and Apply'
       inputs:
         azureSubscription: 'azure-devops-connection'  # Your service connection
         scriptType: bash
         scriptLocation: inlineScript
-        workingDirectory: $(System.DefaultWorkingDirectory)/azure/modules
+        workingDirectory: $(System.DefaultWorkingDirectory)/terraform/azure
         inlineScript: |
-          # Copy the Secure File to working directory as dev.tfvars
-          echo "Copying tfvars file to working directory..."
-          cp $(download_tfvars.secureFilePath) ./dev.tfvars
-
-          # Initialize Terraform
           echo "Initializing Terraform..."
           terraform init -input=false
 
-          # Terraform plan
           echo "Planning Terraform changes..."
           terraform plan -input=false -var-file=dev.tfvars
 
-          # Terraform apply
           echo "Applying Terraform..."
           terraform apply -input=false -auto-approve -var-file=dev.tfvars
+
+    # 6️⃣ Optional: Clean up secure files after use
+    - script: |
+        echo "Cleaning up secure files..."
+        rm -f ~/.ssh/id_rsa_azure.pub
+        rm -f ./dev.tfvars
+      displayName: 'Clean Up Secure Files'
