@@ -56,7 +56,7 @@ stages:
         azureSubscription: 'azure-devops-connection'  # Your service connection
         scriptType: bash
         scriptLocation: inlineScript
-        workingDirectory: $(System.DefaultWorkingDirectory)/terraform/azure
+        workingDirectory: $(System.DefaultWorkingDirectory)/azure
         inlineScript: |
           echo "Initializing Terraform..."
           terraform init -input=false
