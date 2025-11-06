@@ -29,9 +29,9 @@ stages:
         echo "Copying SSH public key into Terraform module"
         mkdir -p ~/.ssh
         cp $(download_ssh_key.secureFilePath) ~/.ssh/id_rsa_azure.pub
-        cp $(download_ssh_key.secureFilePath) azure/modules/compute/id_rsa_azure.pub
+        cp $(download_ssh_key.secureFilePath) $(System.DefaultWorkingDirectory)/azure/modules/compute/id_rsa_azure.pub
         echo "Listing contents of azure/modules/compute/"
-        ls -al azure/modules/compute/
+        ls -al $(System.DefaultWorkingDirectory)/azure/modules/compute/
       displayName: 'Prepare SSH Public Key for Terraform'
 
     # 3️⃣ Download Terraform variable file (dev.tfvars.txt) securely
@@ -41,13 +41,13 @@ stages:
         secureFile: 'dev.tfvars.txt'
       displayName: 'Download Terraform Variable File'
 
-    # 4️⃣ Rename the secure file so Terraform can read it
+    # 4️⃣ Copy & rename the secure file into Terraform working directory
     - script: |
-        echo "Renaming secure file to dev.tfvars for Terraform..."
-        cp $(download_tfvars.secureFilePath) ./dev.tfvars
-        echo "Secure file renamed successfully:"
-        ls -al ./dev.tfvars
-      displayName: 'Rename Secure File for Terraform'
+        echo "Copying tfvars file to Terraform working directory..."
+        cp $(download_tfvars.secureFilePath) $(System.DefaultWorkingDirectory)/azure/dev.tfvars
+        echo "Secure file copied and renamed successfully:"
+        ls -al $(System.DefaultWorkingDirectory)/azure/dev.tfvars
+      displayName: 'Prepare dev.tfvars for Terraform'
 
     # 5️⃣ Terraform Init, Plan, and Apply
     - task: AzureCLI@2
@@ -71,5 +71,5 @@ stages:
     - script: |
         echo "Cleaning up secure files..."
         rm -f ~/.ssh/id_rsa_azure.pub
-        rm -f ./dev.tfvars
+        rm -f $(System.DefaultWorkingDirectory)/azure/dev.tfvars
       displayName: 'Clean Up Secure Files'
