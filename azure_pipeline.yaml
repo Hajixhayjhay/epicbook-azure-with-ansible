@@ -13,7 +13,7 @@ stages:
   - job: Terraform_Apply
     displayName: 'Terraform Apply'
     pool:
-      name: 'Default'
+      name: 'SelfHostedPool'
 
     steps:
 
