@@ -7,7 +7,6 @@ resource "azurerm_mysql_flexible_server" "mysql" {
   sku_name               = "B_Standard_B1ms"
   version                = "5.7"
   delegated_subnet_id    = var.private_subnet_id
-
 }
 
 resource "azurerm_mysql_flexible_database" "epicbook_db" {
@@ -18,4 +17,10 @@ resource "azurerm_mysql_flexible_database" "epicbook_db" {
   collation           = "utf8mb4_unicode_ci"
 }
 
-
+# 👇 Add this block to disable SSL requirement for your database
+resource "azurerm_mysql_flexible_server_configuration" "disable_ssl" {
+  name                = "require_secure_transport"
+  resource_group_name = var.resource_group_name
+  server_name         = azurerm_mysql_flexible_server.mysql.name
+  value               = "OFF"
+}
